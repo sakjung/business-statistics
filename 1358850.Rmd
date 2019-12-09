@@ -1,0 +1,133 @@
+---
+title: 'Business Statistics Assessment'
+author: 1358850 # Put your student number here, not your name
+output: 
+   html_document:
+    toc: true
+    toc_depth: 3 
+---
+
+#Data Preparation
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(emmeans)
+library(gridExtra)
+options(width=100)
+```
+
+```{r, include=FALSE}
+payday <- read_csv("payday.csv")
+
+glimpse(payday)
+```
+
+Data Dictionary      | Description
+-------------------- | ------------------------------------------------
+id                   | Customer ID
+credit.score         | credit score of the customers
+loan                 | whether or not people were given the payday loan (dummy variable)
+SES                  | customer's socio econmic status, higher score mean higher status
+well.being           | self-reported well-being of the customers (1-7 scales), 7 is the highest well-being
+adverse.credit.event | whether there was an adverse credit event in the next year (dummy variable)
+
+
+```{r, include=FALSE}
+payday <- payday %>% mutate(id = as.character(id), loan = as.factor(loan), adverse.credit.event = as.factor(adverse.credit.event))
+```
+---
+
+Rename this file and the folder it is in with your student number (e.g., "1912345.Rmd")
+
+Submit this file and the knitted html as a zip file (e.g., 1912345.zip) _by right clicking on the folder to zip it_. That is, the zip file 1912345.zip should contain the folder 1912345 with _only_ the files 1912345.Rmd and 1912345.html
+
+---
+
+# Question 1 Section 1
+
+Plain English answer here!
+
+$\widehat{wellbeing} = \beta_{Intercept} + \beta_{loan} \times Assault + \beta_{creditscore} \times creditscore + \beta_{SES} \times SES$
+
+
+---
+
+# Question 2 Section 1
+
+Plain English answer here!
+
+---
+
+# Question 1 Section 2
+
+```{r}
+grid.arrange(ggplot(payday, aes(x=loan)) + geom_bar(width=0.5),
+             ggplot(payday, aes(x=well.being)) + geom_bar(),
+             ggplot(payday, aes(x=credit.score)) + geom_bar(),
+             ggplot(payday, aes(x=SES)) + geom_bar()
+)
+```
+
+```{r}
+grid.arrange(ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(width = 0.2) ,
+             ggplot(payday, aes(x=credit.score, y=well.being)) + geom_jitter() + geom_smooth(),
+             ggplot(payday, aes(x=SES, y=well.being)) + geom_jitter() + geom_smooth()
+)
+```
+
+
+
+```{r}
+m.wellbeing.loan <- lm(well.being ~ loan, data = payday)
+m.wellbeing.credit <- lm(well.being ~ credit.score, data = payday)
+m.wellbeing.loan.credit <- lm(well.being ~ credit.score + loan, data = payday)
+m.wellbeing.loan.credit.SES <- lm(well.being ~ credit.score + loan + SES, data = payday)
+
+summary(m.wellbeing.loan)
+summary(m.wellbeing.credit)
+summary(m.wellbeing.loan.credit)
+summary(m.wellbeing.loan.credit.SES)
+
+#loan and credit.score is correlated -> 500 or over 500 credit received loan
+#credit score explains better -> we have to drop loan for more accruate prediction
+#SES is significant so include! But the survey info might be wrong info as people can lie
+
+```
+
+```{r}
+cbind(coefficient=coef(m.wellbeing.loan), confint(m.wellbeing.loan))
+cbind(coefficient=coef(m.wellbeing.credit), confint(m.wellbeing.credit))
+cbind(coefficient=coef(m.wellbeing.loan.credit), confint(m.wellbeing.loan.credit))
+
+
+emmeans(m.wellbeing.loan, ~loan)
+emmeans(m.wellbeing.credit, ~credit.score)
+emmeans(m.wellbeing.loan.credit, ~loan + credit.score)
+
+anova(m.wellbeing.loan)
+anova(m.wellbeing.credit)
+anova(m.wellbeing.loan.credit)
+anova(m.wellbeing.loan.credit.SES)
+
+drop1(m.wellbeing.loan.credit, test="F")
+```
+
+```{r}
+m.wellbeing.loan.credit.SES.2 <- lm(well.being ~ loan*credit.score*SES, data = payday)
+
+summary(m.wellbeing.loan.credit.SES.2)
+
+cbind(coefficient=coef(m.wellbeing.loan.credit.SES.2), confint(m.wellbeing.loan.credit.SES.2))
+
+anova(m.wellbeing.loan.credit.SES.2)
+```
+
+
+---
+
+# Question 2 Section 2
+
+```{r}
+
+```
+
