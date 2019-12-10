@@ -13,12 +13,12 @@ output:
 library(tidyverse)
 library(emmeans)
 library(gridExtra)
+library(grid)
 options(width=100)
 ```
 
 ```{r, include=FALSE}
 payday <- read_csv("payday.csv")
-
 glimpse(payday)
 ```
 
@@ -32,9 +32,6 @@ well.being           | self-reported well-being of the customers (1-7 scales), 7
 adverse.credit.event | whether there was an adverse credit event in the next year (dummy variable)
 
 
-```{r, include=FALSE}
-payday <- payday %>% mutate(id = as.character(id), loan = as.factor(loan), adverse.credit.event = as.factor(adverse.credit.event))
-```
 ---
 
 Rename this file and the folder it is in with your student number (e.g., "1912345.Rmd")
@@ -69,10 +66,13 @@ grid.arrange(ggplot(payday, aes(x=loan)) + geom_bar(width=0.5),
 ```
 
 ```{r}
-grid.arrange(ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(width = 0.2) ,
-             ggplot(payday, aes(x=credit.score, y=well.being)) + geom_jitter() + geom_smooth(),
-             ggplot(payday, aes(x=SES, y=well.being)) + geom_jitter() + geom_smooth()
-)
+mean.wellbeing.loan <- payday %>% group_by(loan) %>% summarize(mean.well = mean(well.being))
+
+ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(aes(col = factor(loan))) + geom_hline(data = mean.wellbeing.loan, aes(yintercept = mean.well, col = factor(loan))) + geom_smooth(data = payday, mapping = aes(x=loan, y=well.being), method = "lm", se=FALSE)
+
+ggplot(payday, aes(x=credit.score, y=well.being)) + geom_jitter() + geom_smooth(method = "lm", se=FALSE)
+
+ggplot(payday, aes(x=SES, y=well.being)) + geom_jitter() + geom_smooth(method = "lm", se=FALSE)
 ```
 
 
@@ -82,15 +82,19 @@ m.wellbeing.loan <- lm(well.being ~ loan, data = payday)
 m.wellbeing.credit <- lm(well.being ~ credit.score, data = payday)
 m.wellbeing.loan.credit <- lm(well.being ~ credit.score + loan, data = payday)
 m.wellbeing.loan.credit.SES <- lm(well.being ~ credit.score + loan + SES, data = payday)
+m.wellbeing.loan.SES <- lm(well.being ~ SES + loan, data = payday)
+m.wellbeing.loan.SES.combo <- lm(well.being ~ SES * loan, data = payday)
 
 summary(m.wellbeing.loan)
+summary(m.wellbeing.loan.credit)
+
 summary(m.wellbeing.credit)
 summary(m.wellbeing.loan.credit)
 summary(m.wellbeing.loan.credit.SES)
+summary(m.wellbeing.loan.SES)
 
-#loan and credit.score is correlated -> 500 or over 500 credit received loan
-#credit score explains better -> we have to drop loan for more accruate prediction
-#SES is significant so include! But the survey info might be wrong info as people can lie
+summary(m.wellbeing.loan.SES.combo)
+#the product of SES and loan is not significant impact on the prediction -> MEANINGLESS!
 
 ```
 
@@ -98,36 +102,96 @@ summary(m.wellbeing.loan.credit.SES)
 cbind(coefficient=coef(m.wellbeing.loan), confint(m.wellbeing.loan))
 cbind(coefficient=coef(m.wellbeing.credit), confint(m.wellbeing.credit))
 cbind(coefficient=coef(m.wellbeing.loan.credit), confint(m.wellbeing.loan.credit))
+cbind(coefficient=coef(m.wellbeing.loan.SES), confint(m.wellbeing.loan.SES))
+cbind(coefficient=coef(m.wellbeing.loan.SES.combo), confint(m.wellbeing.loan.SES.combo))
 
-
-emmeans(m.wellbeing.loan, ~loan)
-emmeans(m.wellbeing.credit, ~credit.score)
-emmeans(m.wellbeing.loan.credit, ~loan + credit.score)
+m.wellbeing.loan.emm <- summary(emmeans(m.wellbeing.loan, ~loan))
+m.wellbeing.credit.emm <- summary(emmeans(m.wellbeing.credit, ~credit.score))
+m.wellbeing.loan.credit.emm <- summary(emmeans(m.wellbeing.loan.credit, ~ credit.score + loan))
+m.wellbeing.loan.SES.emm <- summary(emmeans(m.wellbeing.loan.SES, ~ SES + loan))
+#loan emmean (0 = 2.89 / 1 = 5.05) VS loan.credit emmean (0 = 4.09 / 1 = 3.94)
+#loan.credit model is wrong due to the multicollinearity
+#loan.SES model explains OK? (0 = 3.23 / 1 = 4.74)
 
 anova(m.wellbeing.loan)
 anova(m.wellbeing.credit)
 anova(m.wellbeing.loan.credit)
+anova(m.wellbeing.loan.SES)
 anova(m.wellbeing.loan.credit.SES)
+anova(m.wellbeing.loan.SES.combo)
 
 drop1(m.wellbeing.loan.credit, test="F")
 ```
 
 ```{r}
-m.wellbeing.loan.credit.SES.2 <- lm(well.being ~ loan*credit.score*SES, data = payday)
+round(cor(payday[,c("credit.score", "loan", "SES")]), digits = 1)^2
 
-summary(m.wellbeing.loan.credit.SES.2)
-
-cbind(coefficient=coef(m.wellbeing.loan.credit.SES.2), confint(m.wellbeing.loan.credit.SES.2))
-
-anova(m.wellbeing.loan.credit.SES.2)
+#there is strong positive correlation (r2 = 0.81) between credit.score and loan -> becuz ppl who have credit of 500 or over received loan
 ```
 
+```{r}
+#graph showing the effect of credit.score on loan
+credit.deciles <- quantile(pull(payday, credit.score), seq(0,1,.1))
+payday.creditcut <- payday %>% mutate(credit.cut = cut(credit.score, breaks=credit.deciles, include.lowest=TRUE))
+payday.by.credit.cut.loan <- payday.creditcut %>% group_by(credit.cut,loan) %>% summarise(mean.wellbeing=mean(well.being), mean.credit=mean(credit.score))
+
+m.wellbeing.loan.credit.cut <- lm(well.being ~ credit.cut + loan, data=payday.creditcut)
+m.wellbeing.loan.credit.cut.emm <- summary(emmeans(m.wellbeing.loan.credit.cut, ~credit.cut + loan))
+
+grid.arrange(
+	ggplot(payday.creditcut, aes(y=well.being, x=loan)) + geom_jitter(width = 0.2) + geom_smooth(method = "lm", se=FALSE) + labs(x= "Loan", y="Well being"),
+	ggplot(payday.creditcut, aes(y=well.being, x=loan, col=credit.cut)) + geom_jitter(width = 0.2) + geom_line(data=m.wellbeing.loan.credit.cut.emm, aes(y=emmean, x=loan, col=credit.cut)) + guides(col=guide_legend(title="credit cut")) + labs(x= "Loan", y="Well being"),
+	ncol=2 , widths=c(1,1.4), top = "The effect of credit score on loan"
+)
+```
+
+```{r}
+#graph showing the effect of SES on loan
+credit.deciles <- quantile(pull(payday, credit.score), seq(0,1,.1))
+payday.creditcut <- payday %>% mutate(credit.cut = cut(credit.score, breaks=credit.deciles, include.lowest=TRUE))
+
+m.wellbeing.loan.SES.factor <- lm(well.being ~ factor(SES) + loan, data=payday.creditcut)
+m.wellbeing.loan.SES.factor.emm <- summary(emmeans(m.wellbeing.loan.SES.factor, ~ factor(SES) + loan))
+
+grid.arrange(
+	ggplot(payday, aes(y=well.being, x=loan)) + geom_jitter(width = 0.2) + geom_smooth(method = "lm", se=FALSE) + labs(x= "Loan", y="Well being"),
+	ggplot(payday, aes(y=well.being, x=loan, col=factor(SES))) + geom_jitter(width = 0.2) + geom_line(data=m.wellbeing.loan.SES.factor.emm, aes(y=emmean, x=loan, col=factor(SES))) + guides(col=guide_legend(title="Socio Economic Status")) + labs(x= "Loan", y="Well being"),
+	ncol=2 , widths=c(1,1.7), top = "The effect of SES on loan"
+)
+```
+
+
+The left plot shows $wellbeing$ score as a function of $loan$. When $loan$ is the only independent variable, it is a significant predictor of the $wellbeing$. The right plot breaks this down by deciles of $cerdit$ score. It is clear that when $credit$ score is held constant at any given decile, $loan$ has a much smaller effect. That is, $loan$ is not a significant predictor when $credit$ is also taken into account to the prediction. This is because there is a strong positive correlation between the $credit$ score and $loan$. This is mainly because of the condition that people who applied a loan could receive the loan when they have a credit of 500 or larger. As a result, as shown in the right plot, all $credit$ cut dots of over 500 plotted right hand side ($loan$ = 1), and the dots of less than 500 are all plotted on the left hand side ($loan$ = 0).
 
 ---
 
 # Question 2 Section 2
 
+
 ```{r}
 
 ```
+
+
+
+```{r}
+#survive -> adverse.credit.event
+#age -> SES
+#sex -> loan
+Age.deciles <- quantile(titanic$Age, probs=seq(0,1,0.1))
+titanic <- titanic %>% mutate(Age.Decile=cut(Age, breaks=Age.deciles, include.lowest=TRUE))
+titanic.by.age.sex <- titanic %>% group_by(Age.Decile,Sex) %>% summarise(Proportion.Survived=mean(Survived), decile.mean.age=mean(Age))
+
+ggplot(summary(m.titanic.by.age.sex.binom.emm), aes(x=Age, col=Sex, fill=Sex, y=prob, ymin=asymp.LCL, ymax=asymp.UCL)) + 
+    geom_ribbon(alpha=0.5) + geom_line() + 
+    geom_jitter(data=titanic, mapping=aes(y=Survived, x=Age, col=Sex, ymin=NULL, ymax=NULL), height=0.04, width=0, alpha=0.5) + 
+    geom_point(data=titanic.by.age.sex, mapping=aes(y=Proportion.Survived, x=decile.mean.age, col=Sex, ymin=NULL, ymax=NULL), size=2, shape=3) +
+    labs(x="Age / Years", y="Probability of Survival", subtitle="Dots are individuals who survive or die.\n+s are the proportion surviving in each age decile.\nThe line and ribbon are the fit of a logistic regression model and its 95% CI") + 
+    ylim(-0.05,1.05)
+
+```
+
+
+
+
 
