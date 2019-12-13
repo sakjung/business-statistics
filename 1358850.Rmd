@@ -68,7 +68,7 @@ grid.arrange(ggplot(payday, aes(x=loan)) + geom_bar(width=0.5),
 ```{r}
 mean.wellbeing.loan <- payday %>% group_by(loan) %>% summarize(mean.well = mean(well.being))
 
-ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(aes(col = factor(loan))) + geom_hline(data = mean.wellbeing.loan, aes(yintercept = mean.well, col = factor(loan))) + geom_smooth(data = payday, mapping = aes(x=loan, y=well.being), method = "lm", se=FALSE)
+ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(width = 0.02, alpha = 0.4, aes(col = factor(loan))) + geom_hline(data = mean.wellbeing.loan, aes(yintercept = mean.well, col = factor(loan))) + geom_smooth(data = payday, mapping = aes(x=loan, y=well.being), method = "lm", se=FALSE, col ="black")
 
 ggplot(payday, aes(x=credit.score, y=well.being)) + geom_jitter() + geom_smooth(method = "lm", se=FALSE)
 
@@ -123,6 +123,8 @@ anova(m.wellbeing.loan.SES.combo)
 drop1(m.wellbeing.loan.credit, test="F")
 ```
 
+SES does not differ depends on the loan -> the product variable is useless!
+
 ```{r}
 round(cor(payday[,c("credit.score", "loan", "SES")]), digits = 1)^2
 
@@ -145,6 +147,10 @@ grid.arrange(
 )
 ```
 
+The left plot shows $wellbeing$ score as a function of $loan$. When $loan$ is the only independent variable, it is a significant predictor of the $wellbeing$. The right plot breaks this down by deciles of $cerdit$ score. It is clear that when $credit$ score is held constant at any given decile, $loan$ has a much smaller effect. That is, $loan$ is not a significant predictor when $credit$ is also taken into account to the prediction. This is because there is a strong positive correlation between the $credit$ score and $loan$. This is mainly because of the condition that people who applied a loan could receive the loan when they have a credit of 500 or larger. As a result, as shown in the right plot, all $credit$ cut dots of over 500 plotted right hand side ($loan$ = 1), and the dots of less than 500 are all plotted on the left hand side ($loan$ = 0).
+
+That is, credit score dilutes the prediction power of loan. No need to include. These two actually implies similar prediction meaning on the wellbeing (`credit score > 500` == `loan = 1`). But for the question, only loan should be the independent varaible.
+
 ```{r}
 #graph showing the effect of SES on loan
 credit.deciles <- quantile(pull(payday, credit.score), seq(0,1,.1))
@@ -160,8 +166,10 @@ grid.arrange(
 )
 ```
 
+The left plot shows $wellbeing$ score as a function of $loan$. The right plot grouped this by $SES$. Unlike the previous case of $loan$ and $credit$ score, when $SES$ is held constant at any given level, $loan$ still has significant predictive power.
 
-The left plot shows $wellbeing$ score as a function of $loan$. When $loan$ is the only independent variable, it is a significant predictor of the $wellbeing$. The right plot breaks this down by deciles of $cerdit$ score. It is clear that when $credit$ score is held constant at any given decile, $loan$ has a much smaller effect. That is, $loan$ is not a significant predictor when $credit$ is also taken into account to the prediction. This is because there is a strong positive correlation between the $credit$ score and $loan$. This is mainly because of the condition that people who applied a loan could receive the loan when they have a credit of 500 or larger. As a result, as shown in the right plot, all $credit$ cut dots of over 500 plotted right hand side ($loan$ = 1), and the dots of less than 500 are all plotted on the left hand side ($loan$ = 0).
+That is, `SES` has no impacts on the prediction power of loan. Therefore, setting `SES` as an independent varaible will make linear regression model better. However, the question is about the relationship between `wellbeing` and `loan`. Therefore, `SES` should not be taken into account to answer the question, otherwise it will answer the question about `Does receiving a payday loan and difference in socio economic status change well-being?`.   
+
 
 ---
 
@@ -169,15 +177,32 @@ The left plot shows $wellbeing$ score as a function of $loan$. When $loan$ is th
 
 
 ```{r}
+mean.adverse.loan <- payday %>% group_by(loan) %>% summarize(mean.adverse = mean(adverse.credit.event))
 
+ggplot(payday, aes(x=loan, y=adverse.credit.event, col = factor(loan))) + geom_jitter(alpha = 0.4, width = 0.2, height = 0.2) + geom_point(data = mean.adverse.loan, aes(x=loan, y=mean.adverse, col = factor(loan))) + geom_line(data = mean.adverse.loan, aes(x=loan, y=mean.adverse), col = "black")
 ```
 
 
+```{r}
+m.adverse.by.loan.binom <- glm(adverse.credit.event~loan, family=binomial, data=payday)
+summary(m.adverse.by.loan.binom)
+
+cbind(coef(m.adverse.by.loan.binom),confint(m.adverse.by.loan.binom))
+
+m.adverse.by.loan.binom.emm <- summary(emmeans(m.adverse.by.loan.binom, ~loan, type="response"))
+```
 
 ```{r}
-#survive -> adverse.credit.event
-#age -> SES
-#sex -> loan
+ggplot(m.adverse.by.loan.binom.emm, aes(x=loan, y=prob, ymin=asymp.LCL, ymax=asymp.UCL)) + 
+    geom_ribbon(alpha=0.5) + geom_line() + 
+    geom_jitter(data=payday, mapping=aes(y=adverse.credit.event, x=loan, ymin=NULL, ymax=NULL), alpha = 0.4, width = 0.2, height = 0.2) + 
+    geom_point(data=mean.adverse.loan, mapping=aes(y=mean.adverse, x=loan, ymin=NULL, ymax=NULL), col="green", size=2) +
+    labs(x="Loan", y="Probability of Adverse Credit Event", subtitle="Black dots are individuals who experienced adverse credit event or not.\nGreen dots are the proportion adverse credit event according to loan status.\nThe line and ribbon are the fit of a logistic regression model and its 95% CI") + 
+    ylim(0,1)
+```
+
+
+```{r}
 Age.deciles <- quantile(titanic$Age, probs=seq(0,1,0.1))
 titanic <- titanic %>% mutate(Age.Decile=cut(Age, breaks=Age.deciles, include.lowest=TRUE))
 titanic.by.age.sex <- titanic %>% group_by(Age.Decile,Sex) %>% summarise(Proportion.Survived=mean(Survived), decile.mean.age=mean(Age))
