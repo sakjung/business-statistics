@@ -80,10 +80,11 @@ ggplot(payday, aes(x=SES, y=well.being)) + geom_jitter() + geom_smooth(method = 
 ```{r}
 m.wellbeing.loan <- lm(well.being ~ loan, data = payday)
 m.wellbeing.credit <- lm(well.being ~ credit.score, data = payday)
-m.wellbeing.loan.credit <- lm(well.being ~ credit.score + loan, data = payday)
-m.wellbeing.loan.credit.SES <- lm(well.being ~ credit.score + loan + SES, data = payday)
-m.wellbeing.loan.SES <- lm(well.being ~ SES + loan, data = payday)
-m.wellbeing.loan.SES.combo <- lm(well.being ~ SES * loan, data = payday)
+m.wellbeing.loan.credit <- lm(well.being ~ loan + credit.score, data = payday)
+m.wellbeing.loan.credit.combo <- lm(well.being ~ loan * credit.score, data = payday)
+m.wellbeing.loan.credit.SES <- lm(well.being ~ loan + credit.score + SES, data = payday)
+m.wellbeing.loan.SES <- lm(well.being ~ loan + SES, data = payday)
+m.wellbeing.loan.SES.combo <- lm(well.being ~ loan * SES, data = payday)
 
 summary(m.wellbeing.loan)
 summary(m.wellbeing.loan.credit)
@@ -93,7 +94,9 @@ summary(m.wellbeing.loan.credit)
 summary(m.wellbeing.loan.credit.SES)
 summary(m.wellbeing.loan.SES)
 
+summary(m.wellbeing.loan.credit.combo)
 summary(m.wellbeing.loan.SES.combo)
+
 #the product of SES and loan is not significant impact on the prediction -> MEANINGLESS!
 
 ```
@@ -185,7 +188,14 @@ ggplot(payday, aes(x=loan, y=adverse.credit.event, col = factor(loan))) + geom_j
 
 ```{r}
 m.adverse.by.loan.binom <- glm(adverse.credit.event~loan, family=binomial, data=payday)
+
+m.adverse.by.loan.credit.binom <- glm(adverse.credit.event~ credit.score * loan, family=binomial, data=payday)
+
+m.adverse.by.loan.SES.binom <- glm(adverse.credit.event~ SES * loan, family=binomial, data=payday)
+
 summary(m.adverse.by.loan.binom)
+summary(m.adverse.by.loan.credit.binom)
+summary(m.adverse.by.loan.SES.binom)
 
 cbind(coef(m.adverse.by.loan.binom),confint(m.adverse.by.loan.binom))
 
