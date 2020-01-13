@@ -7,7 +7,7 @@ output:
     toc_depth: 3 
 ---
 
-#Data Preparation
+# Data Preparation
 
 ```{r setup, include=FALSE}
 library(tidyverse)
@@ -18,6 +18,7 @@ options(width=100)
 ```
 
 ```{r, include=FALSE}
+#Read the data and check the structure
 payday <- read_csv("payday.csv")
 glimpse(payday)
 ```
@@ -44,7 +45,13 @@ Submit this file and the knitted html as a zip file (e.g., 1912345.zip) _by righ
 
 Plain English answer here!
 
-$\widehat{wellbeing} = \beta_{Intercept} + \beta_{loan} \times Assault + \beta_{creditscore} \times creditscore + \beta_{SES} \times SES$
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+mean.wellbeing.loan <- payday %>% group_by(loan) %>% summarize(mean.well = mean(well.being))
+
+ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(width = 0.08, alpha = 0.3, aes(col = factor(loan))) + geom_point(data = mean.wellbeing.loan, aes(x= loan, y = mean.well), shape=4) + geom_smooth(data = payday, mapping = aes(x=loan, y=well.being), method = "lm", se=FALSE, col ="black") + labs(x= "Loan", y="Well being") + guides(col=guide_legend(title="Loan status"))
+```
+
+"According to the statistical analysis, the well being of the customers change depending on their loan status. In conclusion, 2.17 extra well being score is expected 95% CI[2.084-2.246] for receiving a loan. This increase is significantly different from zero, $t(4998) = 52.33$, $p<.0001$. The change can be visually recognised in the above figure, as the black line tends to go upper right as loan increases from 0 to 1. In addtion, the dispersion of coloured dots clearly show that customers with no loan (`red dots`) are clusterd more in low well being score, while the customers with loan (`blue dots`) are clusted more in high well being score. If a customer has no loan, the estiated well being score is 2.89 95% CI[2.83-2.95]. If a customer has a loan, the estimated well being score is 5.05 95% CI[5.00-5.11]."
 
 
 ---
@@ -57,7 +64,10 @@ Plain English answer here!
 
 # Question 1 Section 2
 
+## Exploratory Data Analysis
+
 ```{r}
+#Graphical view of each column data of the data set
 grid.arrange(ggplot(payday, aes(x=loan)) + geom_bar(width=0.5),
              ggplot(payday, aes(x=well.being)) + geom_bar(),
              ggplot(payday, aes(x=credit.score)) + geom_bar(),
@@ -66,9 +76,10 @@ grid.arrange(ggplot(payday, aes(x=loan)) + geom_bar(width=0.5),
 ```
 
 ```{r}
+#Brief graphical view of relationships bewteen the well.being column (target column) and the other columns
 mean.wellbeing.loan <- payday %>% group_by(loan) %>% summarize(mean.well = mean(well.being))
 
-ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(width = 0.02, alpha = 0.4, aes(col = factor(loan))) + geom_hline(data = mean.wellbeing.loan, aes(yintercept = mean.well, col = factor(loan))) + geom_smooth(data = payday, mapping = aes(x=loan, y=well.being), method = "lm", se=FALSE, col ="black")
+ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(width = 0.02, alpha = 0.4, aes(col = factor(loan))) + geom_point(data = mean.wellbeing.loan, aes(x= loan, y = mean.well), shape=4) + geom_smooth(data = payday, mapping = aes(x=loan, y=well.being), method = "lm", se=FALSE, col ="black")
 
 ggplot(payday, aes(x=credit.score, y=well.being)) + geom_jitter() + geom_smooth(method = "lm", se=FALSE)
 
@@ -76,103 +87,90 @@ ggplot(payday, aes(x=SES, y=well.being)) + geom_jitter() + geom_smooth(method = 
 ```
 
 
+## Linear Regression model
+
+### Model 1
+
+$\widehat{wellbeing} = \beta_{Intercept} + \beta_{loan} \times loan$
 
 ```{r}
-m.wellbeing.loan <- lm(well.being ~ loan, data = payday)
-m.wellbeing.credit <- lm(well.being ~ credit.score, data = payday)
-m.wellbeing.loan.credit <- lm(well.being ~ loan + credit.score, data = payday)
-m.wellbeing.loan.credit.combo <- lm(well.being ~ loan * credit.score, data = payday)
-m.wellbeing.loan.credit.SES <- lm(well.being ~ loan + credit.score + SES, data = payday)
-m.wellbeing.loan.SES <- lm(well.being ~ loan + SES, data = payday)
-m.wellbeing.loan.SES.combo <- lm(well.being ~ loan * SES, data = payday)
-
-summary(m.wellbeing.loan)
-summary(m.wellbeing.loan.credit)
-
-summary(m.wellbeing.credit)
-summary(m.wellbeing.loan.credit)
-summary(m.wellbeing.loan.credit.SES)
-summary(m.wellbeing.loan.SES)
-
-summary(m.wellbeing.loan.credit.combo)
-summary(m.wellbeing.loan.SES.combo)
-
-#the product of SES and loan is not significant impact on the prediction -> MEANINGLESS!
-
+#Making a linear regression model using only loan data
+m.wellbeing.by.loan <- lm(well.being ~ loan, data = payday)
+summary(m.wellbeing.by.loan)
+cbind(coefficient=coef(m.wellbeing.by.loan), confint(m.wellbeing.by.loan))
+( m.wellbeing.loan.emm <- summary(emmeans(m.wellbeing.by.loan, ~loan)) )
 ```
 
+2.17 extra well being score is expected 95% CI[2.084-2.246] for receiving a loan. This increase is significantly different from zero, $t(4998) = 52.33$, $p<.0001$. If a customer has no loan, the estiated well being score is 2.89 95% CI[2.83-2.95]. If a customer has a loan, the estimated well being score is 5.05 95% CI[5.00-5.11]
+
 ```{r}
-cbind(coefficient=coef(m.wellbeing.loan), confint(m.wellbeing.loan))
-cbind(coefficient=coef(m.wellbeing.credit), confint(m.wellbeing.credit))
-cbind(coefficient=coef(m.wellbeing.loan.credit), confint(m.wellbeing.loan.credit))
-cbind(coefficient=coef(m.wellbeing.loan.SES), confint(m.wellbeing.loan.SES))
-cbind(coefficient=coef(m.wellbeing.loan.SES.combo), confint(m.wellbeing.loan.SES.combo))
-
-m.wellbeing.loan.emm <- summary(emmeans(m.wellbeing.loan, ~loan))
-m.wellbeing.credit.emm <- summary(emmeans(m.wellbeing.credit, ~credit.score))
-m.wellbeing.loan.credit.emm <- summary(emmeans(m.wellbeing.loan.credit, ~ credit.score + loan))
-m.wellbeing.loan.SES.emm <- summary(emmeans(m.wellbeing.loan.SES, ~ SES + loan))
-#loan emmean (0 = 2.89 / 1 = 5.05) VS loan.credit emmean (0 = 4.09 / 1 = 3.94)
-#loan.credit model is wrong due to the multicollinearity
-#loan.SES model explains OK? (0 = 3.23 / 1 = 4.74)
-
-anova(m.wellbeing.loan)
-anova(m.wellbeing.credit)
-anova(m.wellbeing.loan.credit)
-anova(m.wellbeing.loan.SES)
-anova(m.wellbeing.loan.credit.SES)
-anova(m.wellbeing.loan.SES.combo)
-
-drop1(m.wellbeing.loan.credit, test="F")
+anova(m.wellbeing.by.loan)
 ```
 
-SES does not differ depends on the loan -> the product variable is useless!
+The result shows that adding loan as an independent variable has a significant effect on predicting the score of well being. Therefore, the well being differs significantly depending on the loan status, F(1,4998) = 2738.6, p<.0001.
+
+### Model 2
+
+$\widehat{wellbeing} = \beta_{Intercept} + \beta_{loan} \times loan + \beta_{credit.score} \times credit.score$
 
 ```{r}
+#Making linear regression model with credit.score and loan
+m.wellbeing.by.credit.loan <- lm(well.being ~ credit.score + loan, data = payday)
+summary(m.wellbeing.by.credit.loan)
+cbind(coefficient=coef(m.wellbeing.by.credit.loan), confint(m.wellbeing.by.credit.loan))
+```
+
+"The well being score is expected to increase by 0.023 95% CI[0.022-0.025] for an extra credit score, holding the loan status without any change. This increase in well being by credit score is significantly different from zero, $t(4997) = 37.217$, $p<.0001$. On the other hand, the well being scroe is expected to decrease by 0.15 95% CI[0.011-0.295], holding the credit.score constant. This decrease in well being by loan status is significantly different from zero, $t(4997) = -2.123$, $p = 0.0338$."
+
+```{r}
+anova(m.wellbeing.by.credit.loan)
+```
+
+"The result shows that adding credit.score as an independent variable to a model with only an intercept significantly improves the fit of the model, $F(1,4997) = 4877.670$, $p<.0001$. Adding loan to a model with an intercept and credit.score sigficantly improves the fit of the model, $F(1,4997) = 4.506$, $p = 0.03382$."
+
+### Discussion on the model 1 and model 2
+
+In the model 1, loan status is clearly a significant predictor on well being score, $t(4998) = 52.33$, $p<.0001$. There is 2.17 extra well being score 95% CI[2.084-2.246] for having a loan. However, in model 2, loan becomes less significant predictor with high p value, $t(4997) = -2.123$, $p = 0.0338$. Furthermore, the impact on the model is weakened. There is 0.15 decrease in well being 95% CI[0.011-0.295] for having a loan, which is relatively smaller impact than 2.17 increase in well being of the model 1.
+
+```{r}
+#Correlation check to assess the multicollinearity between the attributes
 round(cor(payday[,c("credit.score", "loan", "SES")]), digits = 1)^2
-
-#there is strong positive correlation (r2 = 0.81) between credit.score and loan -> becuz ppl who have credit of 500 or over received loan
 ```
 
-```{r}
-#graph showing the effect of credit.score on loan
-credit.deciles <- quantile(pull(payday, credit.score), seq(0,1,.1))
-payday.creditcut <- payday %>% mutate(credit.cut = cut(credit.score, breaks=credit.deciles, include.lowest=TRUE))
-payday.by.credit.cut.loan <- payday.creditcut %>% group_by(credit.cut,loan) %>% summarise(mean.wellbeing=mean(well.being), mean.credit=mean(credit.score))
+This is mainly because **there is multicollinearity between the loan and credit.score**. As shown in the table, there is a significant positive correlation ($r^2 = 0.81$, $N = 5000$) between $credit.score$ and $loan$. This correlation can be explained by the fact that _'everyone applied for a payday loan, and those with credit scores of 500 or over received the loan'_. That is, the loan status is decided depending on the credit scores. Therefore, $credit.score$ explains the well being better and dilutes the effect of $loan$ as a predictor, when both $loan$ and $credit.score$ are taken into account.
 
-m.wellbeing.loan.credit.cut <- lm(well.being ~ credit.cut + loan, data=payday.creditcut)
-m.wellbeing.loan.credit.cut.emm <- summary(emmeans(m.wellbeing.loan.credit.cut, ~credit.cut + loan))
+```{r}
+#Graphical analysis showing the multicollinearity effect between credit.score an loan
+
+credit.deciles <- quantile(pull(payday, credit.score), seq(0,1,.1))
+payday.credit.cut <- payday %>% mutate(credit.cut = cut(credit.score, breaks=credit.deciles, include.lowest=TRUE))
+payday.by.credit.cut.loan <- payday.credit.cut %>% group_by(credit.cut,loan) %>% summarise(mean.wellbeing=mean(well.being), mean.credit=mean(credit.score))
+
+m.wellbeing.credit.cut.loan <- lm(well.being ~ credit.cut + loan, data=payday.credit.cut)
+( m.wellbeing.credit.cut.loan.emm <- summary(emmeans(m.wellbeing.credit.cut.loan, ~credit.cut + loan)) )
 
 grid.arrange(
-	ggplot(payday.creditcut, aes(y=well.being, x=loan)) + geom_jitter(width = 0.2) + geom_smooth(method = "lm", se=FALSE) + labs(x= "Loan", y="Well being"),
-	ggplot(payday.creditcut, aes(y=well.being, x=loan, col=credit.cut)) + geom_jitter(width = 0.2) + geom_line(data=m.wellbeing.loan.credit.cut.emm, aes(y=emmean, x=loan, col=credit.cut)) + guides(col=guide_legend(title="credit cut")) + labs(x= "Loan", y="Well being"),
+	ggplot(payday.credit.cut, aes(y=well.being, x=loan)) + geom_jitter(width = 0.2) + geom_smooth(method = "lm", se=FALSE) + labs(x= "Loan", y="Well being"),
+	ggplot(payday.credit.cut, aes(y=well.being, x=loan, col=credit.cut)) + geom_jitter(width = 0.2) + geom_line(data=m.wellbeing.credit.cut.loan.emm, aes(y=emmean, x=loan, col=credit.cut)) + guides(col=guide_legend(title="credit cut")) + labs(x= "Loan", y="Well being"),
 	ncol=2 , widths=c(1,1.4), top = "The effect of credit score on loan"
 )
 ```
 
-The left plot shows $wellbeing$ score as a function of $loan$. When $loan$ is the only independent variable, it is a significant predictor of the $wellbeing$. The right plot breaks this down by deciles of $cerdit$ score. It is clear that when $credit$ score is held constant at any given decile, $loan$ has a much smaller effect. That is, $loan$ is not a significant predictor when $credit$ is also taken into account to the prediction. This is because there is a strong positive correlation between the $credit$ score and $loan$. This is mainly because of the condition that people who applied a loan could receive the loan when they have a credit of 500 or larger. As a result, as shown in the right plot, all $credit$ cut dots of over 500 plotted right hand side ($loan$ = 1), and the dots of less than 500 are all plotted on the left hand side ($loan$ = 0).
+This graph shows the how the significance of loan changes due to the credit.score. The left plot indicates $model 1$. When $loan$ is the sole independent variable, it is a significant predictor of the $wellbeing$, as shown in the blue regression line. The right plot breaks this down by deciles of $cerdit.score$. It is clear that when $credit.score$ is held constant at any given credit cut, $loan$ has smaller effect on the model with almost horizontal regression line. That is, $loan$ is not a significant predictor anymore when $credit.score$ is also taken into account to model building.
 
-That is, credit score dilutes the prediction power of loan. No need to include. These two actually implies similar prediction meaning on the wellbeing (`credit score > 500` == `loan = 1`). But for the question, only loan should be the independent varaible.
+In summary, it is clear that credit.score and loan have multicollinearity. Therefore, only loan should be considered as an independent variable in order to answer the question `Does receiving a payday loan change well-being?` precisely. If credit.score is considered with loan as independant variables, it dominates loan as a predictor and the model result will answer `Does credit score affect well-being?`.
+
+### Discussion on SES
 
 ```{r}
-#graph showing the effect of SES on loan
-credit.deciles <- quantile(pull(payday, credit.score), seq(0,1,.1))
-payday.creditcut <- payday %>% mutate(credit.cut = cut(credit.score, breaks=credit.deciles, include.lowest=TRUE))
-
-m.wellbeing.loan.SES.factor <- lm(well.being ~ factor(SES) + loan, data=payday.creditcut)
-m.wellbeing.loan.SES.factor.emm <- summary(emmeans(m.wellbeing.loan.SES.factor, ~ factor(SES) + loan))
-
-grid.arrange(
-	ggplot(payday, aes(y=well.being, x=loan)) + geom_jitter(width = 0.2) + geom_smooth(method = "lm", se=FALSE) + labs(x= "Loan", y="Well being"),
-	ggplot(payday, aes(y=well.being, x=loan, col=factor(SES))) + geom_jitter(width = 0.2) + geom_line(data=m.wellbeing.loan.SES.factor.emm, aes(y=emmean, x=loan, col=factor(SES))) + guides(col=guide_legend(title="Socio Economic Status")) + labs(x= "Loan", y="Well being"),
-	ncol=2 , widths=c(1,1.7), top = "The effect of SES on loan"
-)
+m.wellbeing.by.loan.SES <- lm(well.being ~ loan + SES, data = payday)
+summary(m.wellbeing.by.loan.SES)
+cbind(coefficient=coef(m.wellbeing.by.loan.SES), confint(m.wellbeing.by.loan.SES))
 ```
 
-The left plot shows $wellbeing$ score as a function of $loan$. The right plot grouped this by $SES$. Unlike the previous case of $loan$ and $credit$ score, when $SES$ is held constant at any given level, $loan$ still has significant predictive power.
+"The well being score is expected to increase by 1.511 95% CI[1.445-1.577] for having a $loan$, holding the $SES$ without any change. This increase in well being by $loan$ is significantly different from zero, $t(4997) = 45.02$, $p<.0001$. On the other hand, the well being scroe is expected to increase by 0.375 95% CI[0.362-0.387], holding the $loan$ constant. This increase in well being by $SES$ is significantly different from zero, $t(4997) = 59.31$, $p<.0001$."
 
-That is, `SES` has no impacts on the prediction power of loan. Therefore, setting `SES` as an independent varaible will make linear regression model better. However, the question is about the relationship between `wellbeing` and `loan`. Therefore, `SES` should not be taken into account to answer the question, otherwise it will answer the question about `Does receiving a payday loan and difference in socio economic status change well-being?`.   
-
+According to the result, adding $SES$ as an independent varaible will make the linear regression model better. However, the question is about the relationship between $wellbeing$ and $loan$. Therefore, $SES$ should not be taken into account to answer the question, otherwise it will answer the question about `Does receiving a payday loan and difference in socio economic status change well-being?`.
 
 ---
 
@@ -182,7 +180,7 @@ That is, `SES` has no impacts on the prediction power of loan. Therefore, settin
 ```{r}
 mean.adverse.loan <- payday %>% group_by(loan) %>% summarize(mean.adverse = mean(adverse.credit.event))
 
-ggplot(payday, aes(x=loan, y=adverse.credit.event, col = factor(loan))) + geom_jitter(alpha = 0.4, width = 0.2, height = 0.2) + geom_point(data = mean.adverse.loan, aes(x=loan, y=mean.adverse, col = factor(loan))) + geom_line(data = mean.adverse.loan, aes(x=loan, y=mean.adverse), col = "black")
+ggplot(payday, aes(x=loan, y=adverse.credit.event, col = factor(loan))) + geom_jitter(alpha = 0.4, width = 0.2, height = 0.2) + geom_point(data = mean.adverse.loan, aes(x=loan, y=mean.adverse, col = factor(loan)), size = 3) + geom_line(data = mean.adverse.loan, aes(x=loan, y=mean.adverse), col = "black")
 ```
 
 
