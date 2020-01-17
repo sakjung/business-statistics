@@ -46,25 +46,23 @@ Submit this file and the knitted html as a zip file (e.g., 1912345.zip) _by righ
 Plain English answer here!
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-m.wellbeing.by.loan.factor.SES <- lm(well.being ~ loan + SES, data = payday)
-m.wellbeing.loan.factor.SES.emm <- summary(emmeans(m.wellbeing.by.loan.factor.SES, ~ loan + SES, at=list(SES=seq(4,26,1))))
+m.wellbeing.by.loan.SES <- lm(well.being ~ loan + SES, data = payday)
+m.wellbeing.loan.SES.emm <- summary(emmeans(m.wellbeing.by.loan.SES, ~ loan + SES, at=list(SES=seq(4,26,1))))
 wellbeing.by.loan.SES <- payday %>% group_by(SES, loan) %>% summarise(mean.well.being=mean(well.being))
 
-ggplot(m.wellbeing.loan.factor.SES.emm, aes(x=SES, col=factor(loan), fill=factor(loan), y=emmean, ymin=lower.CL, ymax=upper.CL)) + 
+ggplot(m.wellbeing.loan.SES.emm, aes(x=SES, col=factor(loan), fill=factor(loan), y=emmean, ymin=lower.CL, ymax=upper.CL)) + 
     geom_ribbon(alpha=0.2) + geom_line()+ geom_jitter(data=payday, mapping=aes(y=well.being, x=SES, col=factor(loan), ymin=NULL, ymax=NULL), alpha = 0.2, width = 0.3, height = 0.1) + 
     geom_point(data=wellbeing.by.loan.SES, mapping=aes(y=mean.well.being, x=SES, col=factor(loan), ymin=NULL, ymax=NULL), shape=3, size=2) +
-    labs(x="SES", y="Well Being", title = "Well Being ", subtitle="Dots are individuals with their own well being score.\n+s are mean well being score according to loan status and socio economic status.\nThe line and ribbon are the fit of a linear regression model and its 95% CI") + guides(col=guide_legend(title="Loan"), fill=guide_legend(title="Loan")) + theme(plot.title = element_text(hjust = 0.5))
+    labs(x="Socio Economic Status", y="Well Being", title = "Change in Well Being by Loan Status and Socio Economic Status", subtitle="Dots are individuals with their own well being score \n+s are mean well being score at each socio economic status \nThe line and ribbon are the fit of a linear regression model and its 95% CI") + guides(col=guide_legend(title="Loan Status"), fill=guide_legend(title="Loan Status")) + theme(plot.title = element_text(hjust = 0.5)) + scale_color_discrete(labels = c("No", "Yes")) + scale_fill_discrete(labels = c("No", "Yes"))
 ```
 
-"According to statistical analysis, well being of customers does change depending on their loan status. The well being score is expected to increase by 1.511 95% CI[1.445-1.577] for having a $loan$, holding the $SES$ constant. This increase in well being by $loan$ is significantly different from zero, $t(4997) = 45.02$, $p<.0001$. In addition, the result of the analysis shows that if a customer with $SES$ of 15 has no $loan$, the estiated well being score is 3.23 95% CI[3.18-3.27]. If a customer with $SES$ of 15 has a $loan$, the estimated well being score is 4.74 95% CI[4.70-4.78]." The above figure helps the understanding of the results with visualisation. Firstly, most of the blue dots are plotted higher than the red dots in any given SES value. This pattern can be recognised more clearly with the line graphs, as the blue line is placed higher than red line across all the SES values. Therefore, it is clear that customers who have loan (blue) are more likely to have higher well being than those who do not (red), regardless of their socio economic status.
-
+According to the statistical analysis, well being of customers does change depending on their loan status. Well being score is expected to increase by 1.511 95% CI[1.445-1.577] for having a loan, holding socio economic status (SES) constant. This increase is significantly different from zero, $t(4997) = 45.02$, $p<.0001$. If a customer has no loan, holding SES at its' average (15), the estimated well being score is 3.23 95% CI[3.18-3.27]. if a customer has a loan, holding SES at its' average (15), the estimated well being score is 4.74 95% CI[4.70-4.78]. The above figure visually exaplains the results. Firstly, most of the blue dots (`customers with loan`) are plotted higher than most of the red dots (`customers without loan`) in any given SES value. This pattern can be recognised more easily with the line graphs, as the blue line is placed higher than red line across all the SES values. Therefore, it is clear that customers who have loan are more likely to have higher well being score than those who do not, regardless of their socio economic status.
 
 ---
 
 # Question 2 Section 1
 
 Plain English answer here!
-
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 m.adverse.by.loan.SES.binom <- glm(adverse.credit.event ~ loan * SES, family=binomial, data=payday)
@@ -74,12 +72,12 @@ adverse.by.loan.factor.SES <- payday %>% group_by(SES, loan) %>% summarise(mean.
 ggplot(m.adverse.by.loan.SES.binom.emm, aes(x=SES, col=factor(loan), fill=factor(loan), y=prob, ymin=asymp.LCL, ymax=asymp.UCL)) + 
     geom_ribbon(alpha=0.5) + geom_line()+ geom_jitter(data=payday, mapping=aes(y=adverse.credit.event, x=SES, col=factor(loan), ymin=NULL, ymax=NULL), alpha = 0.2, width = 0.47, height = 0.06) + 
     geom_point(data=adverse.by.loan.factor.SES, mapping=aes(y=mean.adverse, x=SES, col=factor(loan), ymin=NULL, ymax=NULL), shape=3, size=2) +
-    labs(x="SES", y="Probability of Adverse Credit Event", subtitle="Dots are individuals who experienced adverse credit event or not.\n+s are the probability of adverse credit event at each socio economic status.\nThe line and ribbon are the fit of a logistic regression model and its 95% CI") + guides(col=guide_legend(title="Loan"), fill=guide_legend(title="Loan")) + theme(plot.title = element_text(hjust = 0.5)) + scale_color_discrete(labels = c("No", "Yes")) + scale_fill_discrete(labels = c("No", "Yes")) + ylim(0,1)
+    labs(x="Socio Economic Status", y="Probability of Adverse Credit Event", title = "Changes in Probability of Adverse Credit Event by Loan Status and Socio Economic Status", subtitle="Dots are individuals who experienced adverse credit event or not \n+s are the probability of adverse credit event at each socio economic status \nThe line and ribbon are the fit of a logistic regression model and its 95% CI") + guides(col=guide_legend(title="Loan Status"), fill=guide_legend(title="Loan Status")) + theme(plot.title = element_text(hjust = 0.5)) + scale_color_discrete(labels = c("No", "Yes")) + scale_fill_discrete(labels = c("No", "Yes")) + ylim(0,1)
 ```
 
-This figure shows the relationships between `loan`, `SES` and `adverse.credit.event`. The blue dots are more dominant on the lower part (`experienced no adverse credit event`), while there are relatively more red dots on the upper part (`experienced adverse credit event`). In addition, the blue line is placed relatively lower than the red line. These features mean that people having a loan are less liekly to experience adverse credit event. According to the statistical analysis, this effect of loan on adverse credit event is significant, $z(4998) = -16.080$, $p < .0001$ and $\chi^2(4998)=6644.6$, $p<.0001$. If a customer has no loan, the probability of experienceing adverse credit event is 0.586 95% CI[0.566-0.606]. If a customer has a loan, the probabilty of experiencing averse credit event decreases to 0.357 95% CI[0.339-0.376]. 
+In the figure above, the blue dots (`customers with loan`) are more dominant on the lower side, while there are relatively more red dots (`customers without loan`) on the upper side. In addition, the blue line is placed lower than the red line. These patterns shows that people with loan are less liekly to experience adverse credit event. According to the statistical analysis, this effect of loan on adverse credit event is significant, $z(4998) = -16.080$, $p < .0001$ and $\chi^2(4998)=6644.6$, $p<.0001$. If a customer has no loan, the probability of experienceing adverse credit event is 0.586 95% CI[0.566-0.606]. If a customer has a loan, the probabilty of experiencing averse credit event decreases to 0.357 95% CI[0.339-0.376].
 
-Across all the SES values, however, both line graphs maintains a horizontal shape and the $+$ signs randomly fluctuate. That is, it is difficult to find out any pattern or trend on adverse credit event when SES is taken into account. Thus, socio economic status does not have a significant effect on adverse credit event as a predictor, $z(4996) = -0.434$, $p = 0.6646$ and $\chi^2(4997)=6643.7$, $p = 0.3394$. Furthermore, it also implies that the effect of loan on adverse credit event does not differ significantly by SES, $z(4996) = -0.351$, $p = 0.7259$ and $\chi^2(4996) = 6643.6$, $p = 0.7259$. Therefore, considering socio economic status in predicting the likelihood of adverse credit event has no significant meaning.
+Across all the Socio Economic Status (SES) values, however, both line graphs maintain a horizontal shape and the $+$ signs randomly fluctuate in both colours. As a result, it is difficult to find out any pattern to predict the probability of adverse credit event when SES is taken into account. Thus, socio economic status does not have a significant effect on adverse credit event as a predictor, $z(4996) = -0.434$, $p = 0.6646$ and $\chi^2(4997)=6643.7$, $p = 0.3394$. Furthermore, it also implies that the effect of loan on adverse credit event does not differ significantly by SES, $z(4996) = -0.351$, $p = 0.7259$ and $\chi^2(4996) = 6643.6$, $p = 0.7259$. Therefore, considering SES has no significant meaning when explaining the relationship between loan and adverse credit event.
 
 ---
 
@@ -94,8 +92,6 @@ ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(width = 0.08, alpha = 0.
 
 "According to the statistical analysis, well being of customers change depending on their loan status. In conclusion, 2.17 extra well being score is expected 95% CI[2.084-2.246] for receiving a loan. This increase is significantly different from zero, $t(4998) = 52.33$, $p<.0001$. The change can be visually recognised in the above figure, as the black line tends to go upper right as loan increases from 0 to 1. In addtion, the dispersion of coloured dots clearly show that customers with no loan (`red dots`) are clusterd more in low well being score area, while the customers with loan (`blue dots`) are clusted more in high well being score area. If a customer has no loan, the estiated well being score is 2.89 95% CI[2.83-2.95]. If a customer has a loan, the estimated well being score is 5.05 95% CI[5.00-5.11]."
 
-
-
 ## Exploratory Data Analysis (EDA)
 
 ```{r}
@@ -108,13 +104,17 @@ grid.arrange(ggplot(payday, aes(x=loan)) + geom_bar(width=0.5),
 ```
 
 ```{r}
-#Brief graphical view of relationships bewteen the well.being column (target column) and the other columns
+# Brief graphical view of relationships bewteen the well.being column (target column) and the other columns
+
+## well.being VS loan
 mean.wellbeing.loan <- payday %>% group_by(loan) %>% summarize(mean.well = mean(well.being))
 
-ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(width = 0.02, alpha = 0.4, aes(col = factor(loan))) + geom_point(data = mean.wellbeing.loan, aes(x= loan, y = mean.well), shape=4) + geom_smooth(data = payday, mapping = aes(x=loan, y=well.being), method = "lm", se=FALSE, col ="black")
+ggplot(payday, aes(x=loan, y=well.being)) + geom_jitter(width = 0.07, alpha = 0.4, aes(col = factor(loan))) + geom_point(data = mean.wellbeing.loan, aes(x= loan, y = mean.well), shape=4) + geom_smooth(data = payday, mapping = aes(x=loan, y=well.being), method = "lm", se=FALSE, col ="black")
 
+## well.being VS credit.score
 ggplot(payday, aes(x=credit.score, y=well.being)) + geom_jitter() + geom_smooth(method = "lm", se=FALSE)
 
+## well.being VS SES
 ggplot(payday, aes(x=SES, y=well.being)) + geom_jitter() + geom_smooth(method = "lm", se=FALSE)
 ```
 
@@ -169,7 +169,7 @@ In the model 1, loan status is clearly a significant predictor on well being sco
 round(cor(payday[,c("credit.score", "loan", "SES")]), digits = 1)^2
 ```
 
-This is mainly because **there is multicollinearity between the loan and credit.score**. As shown in the table, there is a significant positive correlation ($r^2 = 0.81$, $N = 5000$) between $credit.score$ and $loan$. This correlation can be explained by the fact that _'everyone applied for a payday loan, and those with credit scores of 500 or over received the loan'_. The loan status is decided depending on the credit scores. Therefore, $credit.score$ explains well being much better and dilutes the effect of $loan$ as a predictor, when both $loan$ and $credit.score$ are taken into account.
+This is mainly because **there is multicollinearity between the loan and credit.score**. As shown in the table, there is a significant positive correlation ($r^2 = 0.81$, $N = 5000$) between credit score and loan. This correlation can be explained by the fact that _'everyone applied for a payday loan, and those with credit scores of 500 or over received the loan'_. The loan status is decided depending on the credit scores. Therefore, credit score explains well being much better and dilutes the effect of loan as a predictor, when both loan and credit score are taken into account.
 
 ```{r}
 #Graphical analysis showing the multicollinearity effect between credit.score an loan
@@ -188,9 +188,9 @@ grid.arrange(
 )
 ```
 
-This graph shows the how the significance of loan changes due to the credit.score. The left plot indicates $model 1$. When $loan$ is the sole independent variable, it is a significant predictor of the $wellbeing$, as shown in the blue regression line. The right plot breaks this down by deciles of $cerdit.score$. It is clear that when $credit.score$ is held constant at any given credit cut, $loan$ has smaller effect on the model with almost horizontal regression lines. That is, $loan$ is not a significant predictor anymore when $credit.score$ is also taken into account to model building.
+This graph shows how the significance of loan changes due to the credit score. The left plot indicates model 1. When loan is the sole independent variable, it is a significant predictor of wellbeing, as shown in the blue regression line. The right plot breaks this down by deciles of cerdit score. It is clear that when credit score is held constant at any given credit deciles, loan has much smaller effect on the model with almost horizontal regression lines. That is, loan is not a significant predictor anymore when credit score is also taken into account to model.
 
-It is obvious that $credit.score$ and $loan$ have multicollinearity. Therefore, it is better to consider loan as an only independent variable in order to answer the question `Does receiving a payday loan change well-being?` more precisely. If $credit.score$ is considered with $loan$ as independant variables, it dominates loan as a predictor and the model result is more likely to be an answer for the question `How does credit score affect well-being of customers?`.
+It is obvious that credit score and loan have multicollinearity. Therefore, it is better not to consider credit score as an independent variable in order to answer the question `Does receiving a payday loan change well-being?` more precisely. If $credit.score$ is considered with $loan$ as independant variables, it dominates loan as a predictor and the model result is more likely to be an answer for the question `How does credit score affect well-being of customers?`.
 
 ### Discussion on SES
 
@@ -205,16 +205,17 @@ grid.arrange(
 )
 ```
 
-According to correlation matrix discussed above, $SES$ has significantly low level of correlation ($r^2 = 0.81$, $N = 5000$) with $loan$. Therefore, $SES$ can also become a significant predictor on well being while it hardly affects the significance of $loan$. According to the above figure, the regression lines on both left (blue) and right (various colours) plots have almost same slope. It cleary shows that $loan$ still maintains its significance as a predictor when $SES$ is added as an independent variable and held constant at any given value, unlike the previous case of $credit.score$ and $loan$. Both $loan$ and $SES$ can be used into the linear model in order to find out more precise impact (coefficient) of the $loan$ on well being. Having two attributes into the model (model 3) can better reflect the real world of data than that with only one attribute (model 1). Then, the impact of $loan$ on well being will indicate more realistic figure.
+According to correlation matrix discussed above, SES has low level of correlation ($r^2 = 0.09$, $N = 5000$) with loan. Therefore, SES can also become a significant predictor on well being while it hardly affects the significance of loan. According to the above figure, the regression lines on both left (blue) and right (various colours) plots have almost same slope. This clearly shows that loan still maintains its significance as a predictor when SES is added as an independent variable and held constant at any given value, unlike the previous case of credit score and loan. Therefore, both loan and SES can be used into the linear model in order to find out more precise impact (coefficient) of the loan on well being. Having loan and SES as two attributes of the model can better reflect the real world of data than a model having loan as an only attribute (model 1). The effect of loan on well being will indicate more realistic figure, in the model with the two attributes.
 
 ### Final model
 
 ```{r}
 m.wellbeing.by.loan.SES.interaction <- lm(well.being ~ loan * SES, data = payday)
-summary(m.wellbeing.by.loan.SES)
+summary(m.wellbeing.by.loan.SES.interaction)
+anova(m.wellbeing.by.loan.SES.interaction)
 ```
 
-The ineteraction $loan:SES$ is not needed, as the increase of 0.008 by an extra $loan:SES$ is not significantly different from zero, so that $loan$ does not differ significantly depending on the $SES$, $t(4996) = 0.615$, $p = 0.538$. Therefore, the final model should be as follows:
+The ineteraction $loan:SES$ is not required, as the effect of loan on well being does not differ significantly by SES, $t(4996) = 0.615$, $p = 0.538$ and $F(1,4996) = 0.3787$, $p = 0.5383$. Therefore, the final model should be as follows:
 
 $\widehat{wellbeing} = \beta_{Intercept} + \beta_{loan} \times loan + \beta_{SES} \times SES$
 
@@ -225,7 +226,8 @@ cbind(coefficient=coef(m.wellbeing.by.loan.SES), confint(m.wellbeing.by.loan.SES
 ( m.wellbeing.by.loan.SES.emm <- summary(emmeans(m.wellbeing.by.loan.SES, ~ SES + loan)) )
 ```
 
-"The well being score is expected to increase by 1.511 95% CI[1.445-1.577] for having a $loan$, holding the $SES$ without any change. This increase in well being by $loan$ is significantly different from zero, $t(4997) = 45.02$, $p<.0001$. On the other hand, the well being scroe is expected to increase by 0.375 95% CI[0.362-0.387] for an extra $SES$, holding the $loan$ constant. This increase in well being by $SES$ is significantly different from zero, $t(4997) = 59.31$, $p<.0001$. If a customer with $SES$ of 15 has no $loan$, the estiated well being score is 3.23 95% CI[3.18-3.27]. If a customer with $SES$ of 15 has a loan , the estimated well being score is 4.74 95% CI[4.70-4.78]."
+**Summary: **
+"The well being score is expected to increase by 1.511 95% CI[1.445-1.577] for having a loan, holding SES without any change. This increase in well being by loan is significantly different from zero, $t(4997) = 45.02$, $p<.0001$. On the other hand, the well being score is expected to increase by 0.375 95% CI[0.362-0.387] for an extra SES, holding the loan constant. This increase in well being by SES is significantly different from zero, $t(4997) = 59.31$, $p<.0001$. Holding SES at its' average, if a customer has no loan, the estimated well being score is 3.23 95% CI[3.18-3.27]. Holding SES at its' average, if a customer has a loan , the estimated well being score is 4.74 95% CI[4.70-4.78]."
 
 ---
 
